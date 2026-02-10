@@ -69,3 +69,11 @@ To list the dataset specific results and summarize the ablation study (Table 1),
 ```
 python tables.py
 ```
+
+## Contributing
+
+If you're contributing to this repository via pull requests, please refer to our guides:
+- [Pull Request Update Guide](docs/PULL_REQUEST_GUIDE.md) - English version
+- [Pull Request 更新指南](docs/PULL_REQUEST_GUIDE_CN.md) - 中文版本
+
+These guides explain how to update code when working with pull requests.

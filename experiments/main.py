@@ -297,7 +297,7 @@ def main(cfg : DictConfig):
             # Build base callbacks list
             base_callbacks = [bacc_trn_logger, bacc_val_logger, scheduler, checkpoint]
             
-            if len(test_group_list) > 0:
+            if test_group_list:
                 # For single test group, use subject/session structure
                 # For multiple test groups, use a fold identifier
                 if len(test_group_list) == 1:
@@ -307,7 +307,7 @@ def main(cfg : DictConfig):
                                            str(test_group['session']))
                 else:
                     # Multiple test groups - use a descriptive fold name
-                    fold_dir = f"fold_{test_groups[0]}" if len(test_groups) == 1 else f"fold_{'_'.join(map(str, test_groups))}"
+                    fold_dir = f"fold_{'_'.join(map(str, test_groups))}"
                 
                 tensorboard_log_dir = os.path.join('outputs', 'tensorboard', 
                                                    dataset.code, 

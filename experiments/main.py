@@ -5,7 +5,8 @@ from hydra.core.hydra_config import HydraConfig
 import pandas as pd
 from skorch.callbacks.scoring import EpochScoring
 from skorch.dataset import ValidSplit
-from skorch.callbacks import Checkpoint
+from skorch.callbacks import Checkpoint, TensorBoard
+from torch.utils.tensorboard import SummaryWriter
 
 import logging
 import hydra
@@ -291,10 +292,24 @@ def main(cfg : DictConfig):
 
             scheduler = hydra.utils.instantiate(cfg.nnet.scheduler,_convert_='partial')
 
+            # Setup TensorBoard logging
+            # Use the first test group for the TensorBoard directory structure
+            first_test_group = test_group_list[0]
+            tensorboard_log_dir = os.path.join('outputs', 'tensorboard', 
+                                               dataset.code, 
+                                               cfg.nnet.name,
+                                               str(first_test_group['subject']),
+                                               str(first_test_group['session']))
+            if not os.path.exists(tensorboard_log_dir):
+                os.makedirs(tensorboard_log_dir)
+            
+            tensorboard_writer = SummaryWriter(log_dir=tensorboard_log_dir)
+            tensorboard_callback = TensorBoard(writer=tensorboard_writer)
+
             net = DomainAdaptNeuralNetClassifier(
                 mdl_class,
                 train_split=valid_cv, 
-                callbacks=[bacc_trn_logger,bacc_val_logger, scheduler, checkpoint],
+                callbacks=[bacc_trn_logger,bacc_val_logger, scheduler, checkpoint, tensorboard_callback],
                 optimizer=optim_class,
                 verbose=0,
                 device=device,
@@ -396,6 +411,9 @@ def main(cfg : DictConfig):
                     resix += 1
                     r = res.iloc[0,:]
                     log.info(f'{r.dataset} {r.classes}cl | {r.subject} | {r.session} | {r.method} :    trn={r.score_trn:.2f} tst={r.score_tst:.2f}')
+
+            # Close TensorBoard writer
+            tensorboard_writer.close()
 
     if len(results_fit):
         results_fit = pd.concat(results_fit)

@@ -293,22 +293,35 @@ def main(cfg : DictConfig):
             scheduler = hydra.utils.instantiate(cfg.nnet.scheduler,_convert_='partial')
 
             # Setup TensorBoard logging
-            # Use the first test group for the TensorBoard directory structure
-            first_test_group = test_group_list[0]
-            tensorboard_log_dir = os.path.join('outputs', 'tensorboard', 
-                                               dataset.code, 
-                                               cfg.nnet.name,
-                                               str(first_test_group['subject']),
-                                               str(first_test_group['session']))
-            os.makedirs(tensorboard_log_dir, exist_ok=True)
-            
-            tensorboard_writer = SummaryWriter(log_dir=tensorboard_log_dir)
-            tensorboard_callback = TensorBoard(writer=tensorboard_writer)
+            # Create directory structure: outputs/tensorboard/{dataset}/{method}/{fold_info}
+            if len(test_group_list) > 0:
+                # For single test group, use subject/session structure
+                # For multiple test groups, use a fold identifier
+                if len(test_group_list) == 1:
+                    fold_dir = os.path.join(str(test_group_list[0]['subject']), 
+                                           str(test_group_list[0]['session']))
+                else:
+                    # Multiple test groups - use a descriptive fold name
+                    fold_dir = f"fold_{test_groups[0]}" if len(test_groups) == 1 else f"fold_{'_'.join(map(str, test_groups))}"
+                
+                tensorboard_log_dir = os.path.join('outputs', 'tensorboard', 
+                                                   dataset.code, 
+                                                   cfg.nnet.name,
+                                                   fold_dir)
+                os.makedirs(tensorboard_log_dir, exist_ok=True)
+                
+                tensorboard_writer = SummaryWriter(log_dir=tensorboard_log_dir)
+                tensorboard_callback = TensorBoard(writer=tensorboard_writer)
+                callbacks_list = [bacc_trn_logger, bacc_val_logger, scheduler, checkpoint, tensorboard_callback]
+            else:
+                # If no test groups (shouldn't happen in practice), skip TensorBoard
+                callbacks_list = [bacc_trn_logger, bacc_val_logger, scheduler, checkpoint]
+                tensorboard_writer = None
 
             net = DomainAdaptNeuralNetClassifier(
                 mdl_class,
                 train_split=valid_cv, 
-                callbacks=[bacc_trn_logger, bacc_val_logger, scheduler, checkpoint, tensorboard_callback],
+                callbacks=callbacks_list,
                 optimizer=optim_class,
                 verbose=0,
                 device=device,
@@ -411,8 +424,9 @@ def main(cfg : DictConfig):
                     r = res.iloc[0,:]
                     log.info(f'{r.dataset} {r.classes}cl | {r.subject} | {r.session} | {r.method} :    trn={r.score_trn:.2f} tst={r.score_tst:.2f}')
 
-            # Close TensorBoard writer
-            tensorboard_writer.close()
+            # Close TensorBoard writer if it was created
+            if tensorboard_writer is not None:
+                tensorboard_writer.close()
 
     if len(results_fit):
         results_fit = pd.concat(results_fit)

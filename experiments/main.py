@@ -294,12 +294,17 @@ def main(cfg : DictConfig):
 
             # Setup TensorBoard logging
             # Create directory structure: outputs/tensorboard/{dataset}/{method}/{fold_info}
+            # Build base callbacks list
+            base_callbacks = [bacc_trn_logger, bacc_val_logger, scheduler, checkpoint]
+            
             if len(test_group_list) > 0:
                 # For single test group, use subject/session structure
                 # For multiple test groups, use a fold identifier
                 if len(test_group_list) == 1:
-                    fold_dir = os.path.join(str(test_group_list[0]['subject']), 
-                                           str(test_group_list[0]['session']))
+                    # Single test group: use subject/session directory structure
+                    test_group = test_group_list[0]
+                    fold_dir = os.path.join(str(test_group['subject']), 
+                                           str(test_group['session']))
                 else:
                     # Multiple test groups - use a descriptive fold name
                     fold_dir = f"fold_{test_groups[0]}" if len(test_groups) == 1 else f"fold_{'_'.join(map(str, test_groups))}"
@@ -312,10 +317,10 @@ def main(cfg : DictConfig):
                 
                 tensorboard_writer = SummaryWriter(log_dir=tensorboard_log_dir)
                 tensorboard_callback = TensorBoard(writer=tensorboard_writer)
-                callbacks_list = [bacc_trn_logger, bacc_val_logger, scheduler, checkpoint, tensorboard_callback]
+                callbacks_list = base_callbacks + [tensorboard_callback]
             else:
                 # If no test groups (shouldn't happen in practice), skip TensorBoard
-                callbacks_list = [bacc_trn_logger, bacc_val_logger, scheduler, checkpoint]
+                callbacks_list = base_callbacks
                 tensorboard_writer = None
 
             net = DomainAdaptNeuralNetClassifier(

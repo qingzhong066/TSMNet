@@ -300,8 +300,7 @@ def main(cfg : DictConfig):
                                                cfg.nnet.name,
                                                str(first_test_group['subject']),
                                                str(first_test_group['session']))
-            if not os.path.exists(tensorboard_log_dir):
-                os.makedirs(tensorboard_log_dir)
+            os.makedirs(tensorboard_log_dir, exist_ok=True)
             
             tensorboard_writer = SummaryWriter(log_dir=tensorboard_log_dir)
             tensorboard_callback = TensorBoard(writer=tensorboard_writer)
@@ -309,7 +308,7 @@ def main(cfg : DictConfig):
             net = DomainAdaptNeuralNetClassifier(
                 mdl_class,
                 train_split=valid_cv, 
-                callbacks=[bacc_trn_logger,bacc_val_logger, scheduler, checkpoint, tensorboard_callback],
+                callbacks=[bacc_trn_logger, bacc_val_logger, scheduler, checkpoint, tensorboard_callback],
                 optimizer=optim_class,
                 verbose=0,
                 device=device,
